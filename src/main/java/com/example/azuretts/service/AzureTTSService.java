@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 /**
@@ -68,11 +69,11 @@ public class AzureTTSService {
             LOGGER.info("Speech synthesized!");
         } else if (result.getReason() == ResultReason.Canceled) {
             SpeechSynthesisCancellationDetails cancellation = SpeechSynthesisCancellationDetails.fromResult(result);
-            LOGGER.error("Speech synthesis cancelled! Reason:" + cancellation.getReason());
+            LOGGER.error("Speech synthesis cancelled! Reason: {}", cancellation.getReason());
 
             if (cancellation.getReason() == CancellationReason.Error) {
-                LOGGER.error("Speech synthesis cancelled! Error code:" + cancellation.getErrorCode());
-                LOGGER.error("Speech synthesis cancelled! Error details:" + cancellation.getErrorDetails());
+                LOGGER.error("Speech synthesis cancelled! Error code: {}", cancellation.getErrorCode());
+                LOGGER.error("Speech synthesis cancelled! Error details: {}", cancellation.getErrorDetails());
             }
             return false;
         }
@@ -94,7 +95,7 @@ public class AzureTTSService {
         SpeechSynthesisResult result = null;
         try {
             result = task.get();
-        } catch (Exception e) {
+        } catch (InterruptedException | ExecutionException e) {
             throw new SynthesisException(e.getMessage());
         }
         synth.close();
@@ -102,23 +103,25 @@ public class AzureTTSService {
         File audioFile = new File(audioFileAbsolutePath);
         if (isSynthesisSuccessful(result)) {
             long fileSize = 0;
-            if (audioFile != null) {
-                fileSize = 0;
-                try {
-                    fileSize = Files.size(Paths.get(audioFile.getAbsolutePath()));
-                } catch (IOException e) {
-                    throw new SynthesisException(e.getMessage());
-                }
-                if (fileSize > 0) {
-                    LOGGER.info("Audio file of " + fileSize + " bytes generated at " + audioFile.getAbsolutePath());
-                }
+            try {
+                fileSize = Files.size(Paths.get(audioFile.getAbsolutePath()));
+            } catch (IOException e) {
+                throw new SynthesisException(e.getMessage());
             }
+            if (fileSize > 0) {
+                LOGGER.info("Audio file of {} bytes generated at {}", fileSize, audioFile.getAbsolutePath());
+            }
+
         } else {
             LOGGER.error("Audio file was generated empty");
-            if (audioFile.delete()) {
-                LOGGER.info("Audio file deleted successfully");
-            } else {
-                LOGGER.info("Failed to delete audio file");
+            try {
+                if (Files.deleteIfExists(Paths.get(audioFile.getAbsolutePath()))) {
+                    LOGGER.info("Audio file deleted successfully");
+                } else {
+                    LOGGER.info("Failed to delete audio file");
+                }
+            } catch (IOException e) {
+                LOGGER.error(e.getMessage());
             }
             throw new SynthesisException("Synthesis failed!");
         }
@@ -137,7 +140,7 @@ public class AzureTTSService {
         SpeechSynthesisResult result = null;
         try {
             result = task.get();
-        } catch (Exception e) {
+        } catch (InterruptedException | ExecutionException e) {
             throw new SynthesisException(e.getMessage());
         }
         synth.close();
