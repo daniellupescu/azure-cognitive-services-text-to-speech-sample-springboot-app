@@ -40,3 +40,4 @@ mvn spring-boot:run
 ```
 
 ## License
+[MIT](https://choosealicense.com/licenses/mit/)
