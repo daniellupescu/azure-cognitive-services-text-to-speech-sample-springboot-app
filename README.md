@@ -6,7 +6,7 @@ This is a SpringBoot app that contains 2 services:
 - synthesizeAndSaveToFile: Synthesize text and save speech to a .wav file
 - synthesizeAndSpeak: Synthesize text and plays the speech on your computer speakers
 
-Edit the application.yml to put your Azure API ket, Azure region, language, output format, and output folder.
+Edit the application.yml to put your Azure API key, Azure region, language, output format, and output folder.
 
 Edit the `text` variable in class `ApplicationReadyListener.java` to change the text to synthesize.
 
